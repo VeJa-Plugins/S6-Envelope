@@ -1,0 +1,24 @@
+#!/bin/bash
+
+set -e
+
+list_bundles() {
+    echo "m8-env.lv2"
+}
+
+if [ "x${1}x" == "x-lx" ]; then
+    list_bundles
+    exit 0
+fi
+
+if [ "x${LV2_PATH}x" == "xx" ]; then
+    LV2_PATH=~/.lv2/
+fi
+
+for i in m8-env; do
+    cd $i
+    make clean
+    make
+    make INSTALL_PATH=$LV2_PATH install
+    cd ..
+done
