@@ -9,6 +9,7 @@
 @prefix atom: <http://lv2plug.in/ns/ext/atom#> .
 @prefix midi: <http://lv2plug.in/ns/ext/midi#> .
 @prefix urid: <http://lv2plug.in/ns/ext/urid#> .
+@prefix pprop: <http://lv2plug.in/ns/ext/port-props#> .
 
 <http://VeJaPlugins.com/plugins/Release/s6Envelope> 
 a lv2:Plugin, mod:ControlVoltagePlugin;
@@ -142,6 +143,17 @@ lv2:port
     lv2:name "D/R Curve";
     lv2:default 0.3;
     lv2:minimum 0.01;
+    lv2:maximum 1;
+]
+,
+[
+    a lv2:InputPort, lv2:ControlPort;
+    lv2:index 11;
+    lv2:symbol "MANUAL_TRIGGER";
+    lv2:name "Manual Trigger";
+    lv2:portProperty lv2:integer, lv2:toggled;
+    lv2:default 0;
+    lv2:minimum 0;
     lv2:maximum 1;
 ]
 .

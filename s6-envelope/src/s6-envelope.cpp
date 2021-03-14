@@ -33,9 +33,14 @@ enum{
     ENV_INVERT,
     ENV_KEY_FOLLOW,
     ENV_A_RATIO,
-    ENV_DR_RATIO
+    ENV_DR_RATIO,
+    MANUAL_TRIGGER
 };
 
+enum{
+    CV_INP_TRIGGER,
+    MANUAL_INP_TRIGGER
+};
 
 class S6_envelope{
 public:
@@ -69,11 +74,13 @@ public:
     float *env_dr_r;
     float *env_invert;
     float *env_key_follow;
+    float *manual_trigger;
 
     EnvelopeSettings envelopeOneSettings;
     int prev_env_inv;
 
     int triggered;
+    int trigger_source;
 
     ADSR<float> * envelope;
 
@@ -102,6 +109,7 @@ const LV2_Feature* const* features)
     self->envelope->Reset();
 
     self->triggered = 0;
+    self->trigger_source = 0;
 
     return (LV2_Handle)self; 
 }
@@ -143,6 +151,9 @@ void S6_envelope::connect_port(LV2_Handle instance, uint32_t port, void *data)
             break;
         case ENV_DR_RATIO:
             self->env_dr_r = (float*) data;
+            break;
+        case MANUAL_TRIGGER:
+            self->manual_trigger = (float*) data;
             break;
     }
 }
@@ -219,6 +230,7 @@ void S6_envelope::run(LV2_Handle instance, uint32_t n_samples)
     }
 
  	//start audio processing
+    float manual_trig = (float)*self->manual_trigger;
     for(uint32_t i = 0; i < n_samples; i++)
     {
         float trig = self->trigger[i];
@@ -227,11 +239,23 @@ void S6_envelope::run(LV2_Handle instance, uint32_t n_samples)
         {
             self->triggered = 1;
             self->envelope->Gate(self->triggered);
+            self->trigger_source = CV_INP_TRIGGER;
         }
-        else if ((trig == 0) && self->triggered)
+        else if ((manual_trig != 0) && !self->triggered)
         {
-            self->triggered = 0;
+            self->triggered = 1;
             self->envelope->Gate(self->triggered);
+            self->trigger_source = MANUAL_INP_TRIGGER;
+        }
+
+        if (self->triggered)
+        {
+            if ( ((self->trigger_source == MANUAL_INP_TRIGGER) && (manual_trig == 0)) ||
+                 ((self->trigger_source == CV_INP_TRIGGER) && (trig == 0)) )
+            {
+                self->triggered = 0;
+                self->envelope->Gate(self->triggered);
+            }
         }
 
         self->envelope->Process();
