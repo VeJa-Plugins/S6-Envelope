@@ -14,7 +14,7 @@
 #include "lv2/lv2plug.in/ns/lv2core/lv2.h"
 
 /**********************************************************************************************************************************************************/
-#define PLUGIN_URI "http://VeJaPlugins.com/plugins/Release/m8env"
+#define PLUGIN_URI "http://VeJaPlugins.com/plugins/Release/s6Envelope"
 #define PI 3.14159265358979323846264338327950288
 #define MAX_PORTS 8
 #define MAX_OUTPUT_BUFFER_LENGHT 256
@@ -37,13 +37,13 @@ enum{
 };
 
 
-class Mars_8{
+class S6_envelope{
 public:
-    Mars_8()
+    S6_envelope()
     {
        envelope = new ADSR<float>(48000);
     }
-    ~Mars_8() {}
+    ~S6_envelope() {}
     static LV2_Handle instantiate(const LV2_Descriptor* descriptor, double samplerate, const char* bundle_path, const LV2_Feature* const* features);
     static void activate(LV2_Handle instance);
     static void deactivate(LV2_Handle instance);
@@ -70,10 +70,10 @@ public:
     float *env_invert;
     float *env_key_follow;
 
-    EnvelopeSettings prev_envelopeOneSettings;
+    EnvelopeSettings envelopeOneSettings;
     int prev_env_inv;
 
-    int state;
+    int triggered;
 
     ADSR<float> * envelope;
 
@@ -82,12 +82,12 @@ public:
 
 
 /**********************************************************************************************************************************************************/
-LV2_Handle Mars_8::instantiate(const LV2_Descriptor*   descriptor,
+LV2_Handle S6_envelope::instantiate(const LV2_Descriptor*   descriptor,
 double                              samplerate,
 const char*                         bundle_path,
 const LV2_Feature* const* features)
 {
-    Mars_8* self = new Mars_8();
+    S6_envelope* self = new S6_envelope();
 
     //envelope generators
     EnvelopeSettings envelopeOneSettings;
@@ -101,14 +101,14 @@ const LV2_Feature* const* features)
     self->envelope->Invert(0);
     self->envelope->Reset();
 
-    self->state = 0;
+    self->triggered = 0;
 
     return (LV2_Handle)self; 
 }
 /**********************************************************************************************************************************************************/
-void Mars_8::connect_port(LV2_Handle instance, uint32_t port, void *data)
+void S6_envelope::connect_port(LV2_Handle instance, uint32_t port, void *data)
 {
-    Mars_8* self = (Mars_8*)instance;
+    S6_envelope* self = (S6_envelope*)instance;
     switch (port)
     {
         case CvTriggerInput:
@@ -147,57 +147,55 @@ void Mars_8::connect_port(LV2_Handle instance, uint32_t port, void *data)
     }
 }
 /**********************************************************************************************************************************************************/
-void Mars_8::activate(LV2_Handle instance)
+void S6_envelope::activate(LV2_Handle instance)
 {
 }
 
 /**********************************************************************************************************************************************************/
-void Mars_8::run(LV2_Handle instance, uint32_t n_samples)
+void S6_envelope::run(LV2_Handle instance, uint32_t n_samples)
 {
-    Mars_8* self = (Mars_8*)instance;
+    S6_envelope* self = (S6_envelope*)instance;
 
     uint8_t key_folow_on = (int)*self->env_key_follow;
 
     //change the settings if we need to, checks per item and uses the upate flag to trigger changes 
     //inside of the envelope
-    EnvelopeSettings envelopeOneSettings;
     uint8_t update = 0;
-
-    if (self->prev_envelopeOneSettings.Attack != (float)*self->env_a) 
+    if (self->envelopeOneSettings.Attack != (float)*self->env_a) 
     {
-        self->prev_envelopeOneSettings.Attack = (float)*self->env_a; 
+        self->envelopeOneSettings.Attack = (float)*self->env_a; 
         update = 1;
     }
-    if (self->prev_envelopeOneSettings.Decay != (float)*self->env_d) 
+    if (self->envelopeOneSettings.Decay != (float)*self->env_d) 
     {
-        self->prev_envelopeOneSettings.Decay = (float)*self->env_d; 
+        self->envelopeOneSettings.Decay = (float)*self->env_d; 
         update = 1;
     }
-    if (self->prev_envelopeOneSettings.Release != (float)*self->env_r) 
+    if (self->envelopeOneSettings.Release != (float)*self->env_r) 
     {
-        self->prev_envelopeOneSettings.Release = (float)*self->env_r; 
+        self->envelopeOneSettings.Release = (float)*self->env_r; 
         update = 1;
     }
-    if (self->prev_envelopeOneSettings.Sustain != (float)*self->env_s) 
+    if (self->envelopeOneSettings.Sustain != (float)*self->env_s) 
     {
-        self->prev_envelopeOneSettings.Sustain = (float)*self->env_s; 
+        self->envelopeOneSettings.Sustain = (float)*self->env_s; 
         update = 1;
     }
-    if (self->prev_envelopeOneSettings.AttackRatio != (float)*self->env_a_r) 
+    if (self->envelopeOneSettings.AttackRatio != (float)*self->env_a_r) 
     {
-        self->prev_envelopeOneSettings.AttackRatio = (float)*self->env_a_r;
+        self->envelopeOneSettings.AttackRatio = (float)*self->env_a_r;
         update = 1;
     }
-    if (self->prev_envelopeOneSettings.DecayReleaseRatio != (float)*self->env_dr_r) 
+    if (self->envelopeOneSettings.DecayReleaseRatio != (float)*self->env_dr_r) 
     {
-        self->prev_envelopeOneSettings.DecayReleaseRatio = (float)*self->env_dr_r; 
+        self->envelopeOneSettings.DecayReleaseRatio = (float)*self->env_dr_r; 
         update = 1;
     }
 
     //if we need to update our envelope value's do so
     if (update)
     {
-        self->envelope->UpdateParameters(self->prev_envelopeOneSettings);
+        self->envelope->UpdateParameters(self->envelopeOneSettings);
     }
 
     //check if we need to invert our output
@@ -212,12 +210,12 @@ void Mars_8::run(LV2_Handle instance, uint32_t n_samples)
         float pitch = self->cvpitchinput[0];
 
         //devide time by key
-        self->prev_envelopeOneSettings.Attack = ((float)*self->env_a * ((10 - pitch)/10)); 
-        self->prev_envelopeOneSettings.Decay = ((float)*self->env_d * ((10 - pitch)/10)); 
-        self->prev_envelopeOneSettings.Release = ((float)*self->env_r * ((10 - pitch)/10)); 
+        self->envelopeOneSettings.Attack = ((float)*self->env_a * ((10 - pitch)/10)); 
+        self->envelopeOneSettings.Decay = ((float)*self->env_d * ((10 - pitch)/10)); 
+        self->envelopeOneSettings.Release = ((float)*self->env_r * ((10 - pitch)/10)); 
 
         //update envelope
-        self->envelope->UpdateParameters(self->prev_envelopeOneSettings);
+        self->envelope->UpdateParameters(self->envelopeOneSettings);
     }
 
  	//start audio processing
@@ -225,10 +223,15 @@ void Mars_8::run(LV2_Handle instance, uint32_t n_samples)
     {
         float trig = self->trigger[i];
 
-        if (self->state != trig/10)
+        if ((trig != 0) && !self->triggered)
         {
-            self->state = trig/10;
-            self->envelope->Gate(self->state);
+            self->triggered = 1;
+            self->envelope->Gate(self->triggered);
+        }
+        else if ((trig == 0) && self->triggered)
+        {
+            self->triggered = 0;
+            self->envelope->Gate(self->triggered);
         }
 
         self->envelope->Process();
@@ -237,25 +240,25 @@ void Mars_8::run(LV2_Handle instance, uint32_t n_samples)
 }   
 
 /**********************************************************************************************************************************************************/
-void Mars_8::deactivate(LV2_Handle instance)
+void S6_envelope::deactivate(LV2_Handle instance)
 {
     // TODO: include the deactivate function code here
 }
 /**********************************************************************************************************************************************************/
-void Mars_8::cleanup(LV2_Handle instance)
+void S6_envelope::cleanup(LV2_Handle instance)
 {
-  delete ((Mars_8 *) instance); 
+  delete ((S6_envelope *) instance); 
 }
 /**********************************************************************************************************************************************************/
 static const LV2_Descriptor Descriptor = {
     PLUGIN_URI,
-    Mars_8::instantiate,
-    Mars_8::connect_port,
-    Mars_8::activate,
-    Mars_8::run,
-    Mars_8::deactivate,
-    Mars_8::cleanup,
-    Mars_8::extension_data
+    S6_envelope::instantiate,
+    S6_envelope::connect_port,
+    S6_envelope::activate,
+    S6_envelope::run,
+    S6_envelope::deactivate,
+    S6_envelope::cleanup,
+    S6_envelope::extension_data
 };
 /**********************************************************************************************************************************************************/
 LV2_SYMBOL_EXPORT
@@ -265,7 +268,7 @@ const LV2_Descriptor* lv2_descriptor(uint32_t index)
     else return NULL;
 }
 /**********************************************************************************************************************************************************/
-const void* Mars_8::extension_data(const char* uri)
+const void* S6_envelope::extension_data(const char* uri)
 {
     return NULL;
 }

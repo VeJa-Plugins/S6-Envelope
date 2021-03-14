@@ -3,7 +3,7 @@
 set -e
 
 list_bundles() {
-    echo "m8-env.lv2"
+    echo "s6-envelope.lv2"
 }
 
 if [ "x${1}x" == "x-lx" ]; then
@@ -15,7 +15,7 @@ if [ "x${LV2_PATH}x" == "xx" ]; then
     LV2_PATH=~/.lv2/
 fi
 
-for i in m8-env; do
+for i in s6-envelope; do
     cd $i
     make clean
     make

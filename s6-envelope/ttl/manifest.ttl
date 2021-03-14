@@ -1,8 +1,8 @@
 @prefix lv2: <http://lv2plug.in/ns/lv2core#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 
-<http://VeJaPlugins.com/plugins/Release/m8env> 
+<http://VeJaPlugins.com/plugins/Release/s6Envelope> 
 	a lv2:Plugin ;
-    lv2:binary <m8-env.so> ;
-    rdfs:seeAlso <m8-env.ttl> ;
+    lv2:binary <s6-envelope.so> ;
+    rdfs:seeAlso <s6-envelope.ttl> ;
 	lv2:optionalFeature lv2:hardRTCapable .

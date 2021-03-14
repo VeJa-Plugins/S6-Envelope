@@ -1,5 +1,5 @@
 
-NAME = m8-env
+NAME = s6-envelope
 
 # installation path
 INSTALL_PATH = /usr/local/lib/lv2

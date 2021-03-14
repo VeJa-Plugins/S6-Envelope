@@ -10,14 +10,14 @@
 @prefix midi: <http://lv2plug.in/ns/ext/midi#> .
 @prefix urid: <http://lv2plug.in/ns/ext/urid#> .
 
-<http://VeJaPlugins.com/plugins/Release/m8env> 
+<http://VeJaPlugins.com/plugins/Release/s6Envelope> 
 a lv2:Plugin, mod:ControlVoltagePlugin;
 lv2:requiredFeature urid:map ;
 
-doap:name "M8 ENVELOPE";
+doap:name "S6 ENVELOPE";
 
 doap:developer [
-    foaf:name "Jarno & Jan";
+    foaf:name "VeJa Plugins";
     foaf:homepage <>;
     foaf:mbox <mailto:jan@moddevices.com>;
     ];
@@ -32,11 +32,13 @@ doap:maintainer [
     lv2:microVersion 1;
 
 rdfs:comment """
-CV module that contains the Envelope used inside the Mars-8 project
+CV module that contains the Envelope used inside the Saturn-6 project
 
 This envelope also exposes control over the liniarity of both the Attack, Decay and release curve.
 
 The envelope can be modulated by inserting a CV pitch signal to the input and turning on key follow
+
+The envelope also allows for use with no incomming CV signal, by using the internal trigger. This mode works best with the momantary-on mode of the MOD Devices
 """;
 
 lv2:port

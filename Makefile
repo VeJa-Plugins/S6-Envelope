@@ -1,5 +1,5 @@
 EFFECTS_DIR = \
-m8-env
+s6-envelope
 
 ifeq ($(MOD),1)
 EFFECTS_DIR += HardwareBypass

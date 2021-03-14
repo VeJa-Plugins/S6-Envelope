@@ -1,7 +1,7 @@
 /*
   ==============================================================================
 
-    VCF.h
+    ADSR.h
     Author:  Jan Janssen & Jarno Verheesen
     Source:  http://www.earlevel.com/main/2013/06/01/envelope-generators/
 
