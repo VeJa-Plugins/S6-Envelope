@@ -15,7 +15,7 @@
 a lv2:Plugin, mod:ControlVoltagePlugin;
 lv2:requiredFeature urid:map ;
 
-doap:name "S6 ENVELOPE";
+doap:name "S6 Envelope";
 
 doap:developer [
     foaf:name "VeJa Plugins";
