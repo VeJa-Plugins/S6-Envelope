@@ -10,9 +10,9 @@
 
 #pragma once
 
-#include <iostream>
-#include <cstdint>
-#include <cmath>
+//#include <iostream>
+//#include <cstdint>
+//#include <cmath>
 
 namespace VeJa
 {

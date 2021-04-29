@@ -1,17 +1,20 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
 #include <math.h>
-#include <lv2.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "ADSR.h"
 
-#include "lv2/lv2plug.in/ns/ext/atom/atom.h"
-#include "lv2/lv2plug.in/ns/ext/atom/util.h"
-#include "lv2/lv2plug.in/ns/ext/midi/midi.h"
-#include "lv2/lv2plug.in/ns/ext/urid/urid.h"
-#include "lv2/lv2plug.in/ns/lv2core/lv2.h"
+#include "lv2/log/log.h"
+#include "lv2/log/logger.h"
+#include "lv2/core/lv2.h"
+#include "lv2/core/lv2_util.h"
+#include "lv2/log/log.h"
+#include "lv2/log/logger.h"
+
+#include "lv2-hmi.h"
 
 /**********************************************************************************************************************************************************/
 #define PLUGIN_URI "http://VeJaPlugins.com/plugins/Release/s6Envelope"
@@ -59,10 +62,10 @@ public:
     
     // Features
     LV2_URID_Map* map;
-    LV2_URID urid_midiEvent;    
-        
+    LV2_Log_Logger logger;
+    LV2_HMI_WidgetControl* hmi;
+
     //audio ports
-    const LV2_Atom_Sequence* port_events_in;
     float *trigger;
     float *output;
     float *cvpitchinput;
@@ -82,19 +85,40 @@ public:
     int triggered;
     int trigger_source;
 
+    int prev_led_color;
+
     ADSR<float> * envelope;
 
+    LV2_HMI_Addressing trigger_addressing;
 };
 /**********************************************************************************************************************************************************/
 
 
 /**********************************************************************************************************************************************************/
-LV2_Handle S6_envelope::instantiate(const LV2_Descriptor*   descriptor,
+LV2_Handle instantiate(const LV2_Descriptor*   descriptor,
 double                              samplerate,
 const char*                         bundle_path,
 const LV2_Feature* const* features)
 {
     S6_envelope* self = new S6_envelope();
+
+    // Get host features
+    // clang-format off
+    const char* missing = lv2_features_query(
+            features,
+            LV2_LOG__log,           &self->logger.log, false,
+            LV2_URID__map,          &self->map,        true,
+            LV2_HMI__WidgetControl, &self->hmi,        true,
+            NULL);
+    // clang-format on
+
+    lv2_log_logger_set_map(&self->logger, self->map);
+
+    if (missing) {
+        lv2_log_error(&self->logger, "Missing feature <%s>\n", missing);
+        free(self);
+        return NULL;
+    }
 
     //envelope generators
     EnvelopeSettings envelopeOneSettings;
@@ -111,10 +135,12 @@ const LV2_Feature* const* features)
     self->triggered = 0;
     self->trigger_source = 0;
 
+    lv2_log_trace(&self->logger, "starting plugin...");
+
     return (LV2_Handle)self; 
 }
 /**********************************************************************************************************************************************************/
-void S6_envelope::connect_port(LV2_Handle instance, uint32_t port, void *data)
+void connect_port(LV2_Handle instance, uint32_t port, void *data)
 {
     S6_envelope* self = (S6_envelope*)instance;
     switch (port)
@@ -158,12 +184,12 @@ void S6_envelope::connect_port(LV2_Handle instance, uint32_t port, void *data)
     }
 }
 /**********************************************************************************************************************************************************/
-void S6_envelope::activate(LV2_Handle instance)
+void activate(LV2_Handle instance)
 {
 }
 
 /**********************************************************************************************************************************************************/
-void S6_envelope::run(LV2_Handle instance, uint32_t n_samples)
+void run(LV2_Handle instance, uint32_t n_samples)
 {
     S6_envelope* self = (S6_envelope*)instance;
 
@@ -260,29 +286,86 @@ void S6_envelope::run(LV2_Handle instance, uint32_t n_samples)
 
         self->envelope->Process();
         self->output[i] = (self->envelope->GetOutput()*10);
+
+        if ((self->trigger_addressing != NULL) && (self->prev_led_color != (int)(self->envelope->GetOutput()*100)))
+        {
+            self->prev_led_color = (self->envelope->GetOutput()*100);
+
+            if (self->prev_led_color == 0)
+                self->hmi->set_led(self->hmi->handle, self->trigger_addressing, LV2_HMI_LED_Colour_Off, 0, 0);
+            else
+                self->hmi->set_led(self->hmi->handle, self->trigger_addressing, LV2_HMI_LED_Colour_Red, self->prev_led_color, 0);
+        }
     }
 }   
 
 /**********************************************************************************************************************************************************/
-void S6_envelope::deactivate(LV2_Handle instance)
+
+void deactivate(LV2_Handle instance)
 {
     // TODO: include the deactivate function code here
 }
+
 /**********************************************************************************************************************************************************/
-void S6_envelope::cleanup(LV2_Handle instance)
+
+void cleanup(LV2_Handle instance)
 {
   delete ((S6_envelope *) instance); 
 }
+
+/**********************************************************************************************************************************************************/
+
+void addressed(LV2_Handle handle, uint32_t index, LV2_HMI_Addressing addressing, const LV2_HMI_AddressingInfo* info)
+{
+    S6_envelope* self = (S6_envelope*) handle;
+
+    if (index == 11)
+    {
+        self->trigger_addressing = addressing;
+
+        self->prev_led_color = (self->envelope->GetOutput()*100);
+
+        if (self->prev_led_color == 0)
+            self->hmi->set_led(self->hmi->handle, self->trigger_addressing, LV2_HMI_LED_Colour_Off, 0, 0);
+        else
+            self->hmi->set_led(self->hmi->handle, self->trigger_addressing, LV2_HMI_LED_Colour_Red, self->prev_led_color, 0);
+    }
+}
+
+/**********************************************************************************************************************************************************/
+
+void unaddressed(LV2_Handle handle, uint32_t index)
+{
+    S6_envelope* self = (S6_envelope*) handle;
+
+    if (index == 11)
+        self->trigger_addressing = NULL;
+}
+
+/**********************************************************************************************************************************************************/
+
+const void*
+extension_data(const char* uri)
+{
+    static const LV2_HMI_PluginNotification hmiNotif = {
+        addressed,
+        unaddressed,
+    };
+    if (!strcmp(uri, LV2_HMI__PluginNotification))
+        return &hmiNotif;
+    return NULL;
+}
+
 /**********************************************************************************************************************************************************/
 static const LV2_Descriptor Descriptor = {
     PLUGIN_URI,
-    S6_envelope::instantiate,
-    S6_envelope::connect_port,
-    S6_envelope::activate,
-    S6_envelope::run,
-    S6_envelope::deactivate,
-    S6_envelope::cleanup,
-    S6_envelope::extension_data
+    instantiate,
+    connect_port,
+    activate,
+    run,
+    deactivate,
+    cleanup,
+    extension_data
 };
 /**********************************************************************************************************************************************************/
 LV2_SYMBOL_EXPORT
@@ -292,7 +375,3 @@ const LV2_Descriptor* lv2_descriptor(uint32_t index)
     else return NULL;
 }
 /**********************************************************************************************************************************************************/
-const void* S6_envelope::extension_data(const char* uri)
-{
-    return NULL;
-}
