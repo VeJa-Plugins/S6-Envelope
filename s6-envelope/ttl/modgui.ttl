@@ -11,9 +11,9 @@
         modgui:brand "Veja" ;
         modgui:label "S6 Envelope" ;
         modgui:model "boxy" ;
-        modgui:panel "4-knobs" ;
+        modgui:panel "6-knobs" ;
         modgui:color "black" ;
-        modgui:knob "purple" ;
+        modgui:knob "green" ;
         modgui:port [
             lv2:index 0 ;
             lv2:symbol "ENV_A" ;
@@ -30,5 +30,13 @@
             lv2:index 3 ;
             lv2:symbol "ENV_R" ;
             lv2:name "Release" ;
+        ] , [
+            lv2:index 4 ;
+            lv2:symbol "ENV_A_RATIO" ;
+            lv2:name "A Curve" ;
+        ] , [
+            lv2:index 5 ;
+            lv2:symbol "ENV_DR_RATIO" ;
+            lv2:name "DR Curve" ;
         ] ;
     ] .
